@@ -17,13 +17,22 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image1]: ./output_images/1_dist.png "Undistorted"
+[image2]: ./output_images/2_dist_1.png "Undistortion1"
+[image3]: ./output_images/2_dist_3.png "Undistortion2"
+[image4]: ./output_images/3_thresh_1.png "Binary1"
+[image5]: ./output_images/3_thresh_3.png "Binary2"
+[image6]: ./output_images/4_warp_1.png "Warp1"
+[image7]: ./output_images/4_warp_3.png "Warp2"
+[image8]: ./output_images/5_search_1.png "Search1"
+[image9]: ./output_images/5_search_3.png "Search2"
+[image10]: ./output_images/7_result_1.png "Result1"
+[image11]: ./output_images/7_result_3.png "Result2"
+[image12]: ./output_images/8_result_1.png "Result with text1"
+[image13]: ./output_images/8_result_3.png "Result with text2"
+
+[video1]: ./output_images/project_video.mp4 "Video"
+[video2]: ./output_images/project_video_2.mp4 "Video2"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -47,60 +56,106 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 
 #### 1. Provide an example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
+The code for this step is contained in the #2 section of the IPython notebook located in "./my_code/Lane-Line-Detection.ipynb". The function is called `dst_correction()`.
+
+Here I applyed undistortion using the parameter calcurated in the previous section.
+test images like this one:
 ![alt text][image2]
+![alt text][image3]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+The code for this step is contained in the #3 section of the IPython notebook located in "./my_code/Lane-Line-Detection.ipynb". The function is called `pipeline()`.
 
-![alt text][image3]
+I used a combination of 
+
+- Red color thresholds 
+
+- Gradient descend thresholds
+
+to generate a binary image
+
+I tried but didn't apply S-color thresholds, since it detects boundaries of shadow on the road.
+
+Here's an example of my output for this step.  
+
+![alt text][image4]
+![alt text][image5]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for this step is contained in the #4 section of the IPython notebook located in "./my_code/Lane-Line-Detection.ipynb". The function is called `pers_tfm()`.
+
+The function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+center = 640
+off_l = 410
+off_h = 57
+src = np.float32([[center - off_h, 460], 
+                  [center - off_l, 720], 
+                  [center + off_l, 720], 
+                  [center + off_h, 460]])
+dst = np.float32([[300, 0], 
+                  [300, 720], 
+                  [980, 720], 
+                  [980, 0]])
 ```
 
 This resulted in the following source and destination points:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 583, 460      | 300, 0        | 
+| 230, 720      | 300, 720      |
+| 1050, 720     | 980, 720      |
+| 697, 460      | 980, 0        |
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
+![alt text][image6]
+![alt text][image7]
+
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+The code for this step is contained in the #5 section of the IPython notebook located in "./my_code/Lane-Line-Detection.ipynb". The function is called `fit_polynomial()`.
 
-![alt text][image5]
+If there's no result from a previous frame, this function call `find_lane_pixcels()` and
+
+- Take a histogram of the bottom half of the image and find the peaks.
+- Identify the nonzero pixels within each windows 
+- Concatenate the arrays of indices
+- Fit polinomyal curves
+
+
+If curve is fitted in previous frame, this function call `search_around_poly()` and
+
+- Identify the nonzero pixels around given polynomial curves
+- Fit polinomial curve
+
+Followings are the image of the result.
+
+![alt text][image8]
+![alt text][image9]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+The code for this step is contained in the #6 section of the IPython notebook located in "./my_code/Lane-Line-Detection.ipynb". The function is called `measure_center()` and `measure_radius`.
+
+Here I assume the camera is placed the center of the car, and lane width is always 3.7m.
+`measure_center()` difine the position of the vehicle as a difference of the center of fitted lanes and center of the image. 
+
+The radius of the curcature is calculated from fitted polynomial.
+
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+The code for this step is contained in the #7, 8 section of the IPython notebook located in "./my_code/Lane-Line-Det
+ection.ipynb". The function is called `draw_lane()` and `measure_radius`. Here is an example of my result on a test image:
 
-![alt text][image6]
+![alt text][image12]
+![alt text][image13]
 
 ---
 
@@ -108,7 +163,11 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./output_images/project_video.mp4)
+
+I also impremated the piplie which search lane araound the polynomial cureve caluculated in the previous frame.
+
+Here's a [link to the video result](./output_images/project_video_2.mp4)
 
 ---
 
@@ -116,4 +175,7 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+- Optimization of color transform parameters. It still detect edges of the road, shadow and will not work for night scenes.
+- Processing speeds. In real-world application, this should work much faster.
+- Fluctuation of radius and center position. This will be improved by applying low-pass filters (like moving average) using the information from previous frames.
+
